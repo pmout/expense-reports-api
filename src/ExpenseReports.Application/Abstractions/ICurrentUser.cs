@@ -13,3 +13,13 @@ public interface ICurrentUser
     Guid EmployeeId { get; }
     Role Role { get; }
 }
+
+/// <summary>
+/// Nullable view of the current tenant, consumed by the persistence layer's
+/// global query filters. Null (no authenticated user) means queries match
+/// nothing — fail closed, never open.
+/// </summary>
+public interface ITenantProvider
+{
+    Guid? TenantId { get; }
+}
