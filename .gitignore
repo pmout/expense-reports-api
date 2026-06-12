@@ -1,0 +1,25 @@
+# Recruitment material (not part of the deliverable)
+Docs/
+
+# Build results
+bin/
+obj/
+out/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Test results & coverage
+TestResults/
+coverage/
+*.coverage
+*.trx
+
+# Local environment
+*.env
+.env.*
+appsettings.*.local.json
