@@ -17,11 +17,17 @@ public sealed class JwtOptions
     public int ExpiryMinutes { get; init; } = 60;
 }
 
+/// <summary>
+/// Claim names shared between token issuing and token consumption.
+/// </summary>
+public static class JwtClaims
+{
+    public const string TenantId = "tenant_id";
+    public const string Role = "role";
+}
+
 internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options, TimeProvider clock) : ITokenIssuer
 {
-    public const string TenantIdClaim = "tenant_id";
-    public const string RoleClaim = "role";
-
     private readonly JwtOptions _options = options.Value;
 
     public AccessToken Issue(Employee employee)
@@ -38,8 +44,8 @@ internal sealed class JwtTokenIssuer(IOptions<JwtOptions> options, TimeProvider 
             Claims = new Dictionary<string, object>
             {
                 [JwtRegisteredClaimNames.Sub] = employee.Id.ToString(),
-                [TenantIdClaim] = employee.TenantId.ToString(),
-                [RoleClaim] = employee.Role.ToString()
+                [JwtClaims.TenantId] = employee.TenantId.ToString(),
+                [JwtClaims.Role] = employee.Role.ToString()
             },
             SigningCredentials = new SigningCredentials(
                 new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey)),
