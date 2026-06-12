@@ -53,13 +53,14 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(ExpenseEndpoints.ManagerPolicy, policy => policy.RequireRole("Manager")));
 
 // Brute-force protection on /auth/login, partitioned by client IP.
+var loginRateLimit = builder.Configuration.GetValue("RateLimiting:LoginAttemptsPerMinute", 5);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("login", httpContext =>
         RateLimitPartition.GetFixedWindowLimiter(
             httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromMinutes(1) }));
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = loginRateLimit, Window = TimeSpan.FromMinutes(1) }));
 });
 
 builder.Services.ConfigureHttpJsonOptions(options =>
