@@ -9,6 +9,10 @@ namespace ExpenseReports.Domain.Expenses;
 /// <see cref="Approve"/> / <see cref="Reject"/>, which enforce the business
 /// invariants — there is no way to build or mutate an expense into an invalid state.
 /// </summary>
+// This is the aggregate root: the consistency boundary for an expense. It is a
+// `class` (an entity with identity), not a `record`, and it guards its own state
+// — behavior lives here, not in the handlers, which is the core of a rich domain
+// model. Constants are exposed so the API validators reuse the exact same limits.
 public sealed class Expense
 {
     public const int DescriptionMinLength = 5;

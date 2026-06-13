@@ -5,8 +5,12 @@ namespace ExpenseReports.Domain.Expenses;
 /// <summary>
 /// Mandatory justification for a rejected expense (10–500 characters).
 /// </summary>
+// A value object instead of a plain string: holding a RejectionReason is itself
+// proof the text is valid, so Expense.Reject cannot be called with a bad reason.
 public sealed record RejectionReason
 {
+    // Public consts so the same limits are reused by the API validators — the
+    // length rule is defined in exactly one place and the two layers cannot drift.
     public const int MinLength = 10;
     public const int MaxLength = 500;
 

@@ -6,6 +6,12 @@ using ExpenseReports.Domain.ValueObjects;
 
 namespace ExpenseReports.Application.Abstractions;
 
+// These interfaces are "ports": the application layer declares the data
+// operations it needs, and the infrastructure layer provides the "adapters"
+// (the EF Core implementations). Defining them here, in the inner layer, is what
+// inverts the dependency — infrastructure depends on the application, never the
+// reverse — and lets handlers be unit-tested without a database.
+
 /// <summary>
 /// All read methods are tenant-scoped at the query level: an implementation
 /// must make it impossible to load another tenant's data through them.

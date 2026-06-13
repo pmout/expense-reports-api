@@ -8,13 +8,21 @@ namespace ExpenseReports.Domain.Tenants;
 /// domain has no exchange rates, so amounts in different currencies are never
 /// summed together).
 /// </summary>
+// A `class`, not a `record`: a Tenant is an entity defined by its identity (Id),
+// not by its values. Two tenants named "Acme" are different companies. Sealed to
+// keep the model closed — nothing should subclass a domain entity.
 public sealed class Tenant
 {
+    // `= null!` tells the compiler "trust me, this is assigned" — true because
+    // EF Core sets it when materializing and the Create factory sets it otherwise.
+    // It silences the nullable warning without making the property actually nullable.
     public Guid Id { get; }
     public string Name { get; } = null!;
     public decimal MonthlyExpenseLimit { get; }
 
-    private Tenant() { } // EF Core
+    // Parameterless constructor exists solely for EF Core's materialization; it
+    // is private so application code cannot create an unvalidated tenant.
+    private Tenant() { }
 
     private Tenant(Guid id, string name, decimal monthlyExpenseLimit)
     {
@@ -23,6 +31,8 @@ public sealed class Tenant
         MonthlyExpenseLimit = monthlyExpenseLimit;
     }
 
+    // Static factory instead of a public constructor: it has a meaningful name,
+    // validates its inputs, and is the only way to obtain a valid Tenant.
     public static Tenant Create(string name, decimal monthlyExpenseLimit)
     {
         var trimmed = name?.Trim() ?? string.Empty;

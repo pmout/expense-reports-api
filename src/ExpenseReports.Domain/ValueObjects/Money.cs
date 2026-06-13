@@ -6,11 +6,19 @@ namespace ExpenseReports.Domain.ValueObjects;
 /// An amount in a specific currency. Arithmetic across different currencies is
 /// rejected: there is no exchange-rate concept in this domain.
 /// </summary>
+// `record` gives value equality for free: two Money with the same amount and
+// currency are equal, which is exactly how a value object should behave (unlike
+// an entity, it has no identity). `sealed` because value objects are not meant
+// to be extended — subclassing would break their equality contract.
 public sealed record Money
 {
+    // Get-only properties make the type immutable: once created it never changes,
+    // so it can be shared freely and can never drift into an invalid state.
     public decimal Amount { get; }
     public Currency Currency { get; }
 
+    // Private constructor forces every instance through the Of factory below,
+    // which is the single point where validation happens. No caller can bypass it.
     private Money(decimal amount, Currency currency)
     {
         Amount = amount;
