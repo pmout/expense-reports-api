@@ -17,6 +17,10 @@ public sealed record Money
         Currency = currency;
     }
 
+    /// <summary>
+    /// The only way to construct money: rejects negatives and sub-cent precision,
+    /// so an invalid amount can never reach the rest of the system.
+    /// </summary>
     public static Money Of(decimal amount, Currency currency)
     {
         if (amount < 0)
@@ -29,6 +33,10 @@ public sealed record Money
 
     public static Money Zero(Currency currency) => new(0m, currency);
 
+    /// <summary>
+    /// Adds two amounts, refusing to combine different currencies. This is what
+    /// makes the monthly limit currency-safe: there is no implicit conversion.
+    /// </summary>
     public Money Add(Money other)
     {
         if (other.Currency != Currency)

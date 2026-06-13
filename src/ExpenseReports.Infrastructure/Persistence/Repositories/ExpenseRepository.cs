@@ -27,6 +27,8 @@ internal sealed class ExpenseRepository(ExpenseReportsDbContext db) : IExpenseRe
     public async Task<Money> GetApprovedTotalAsync(
         Guid employeeId, Currency currency, int year, int month, CancellationToken ct)
     {
+        // Half-open interval [monthStart, nextMonth) over ExpenseDate. Filtering
+        // by currency keeps the total summable — the limit is enforced per currency.
         var monthStart = new DateOnly(year, month, 1);
         var nextMonth = monthStart.AddMonths(1);
 

@@ -3,6 +3,10 @@ using ExpenseReports.Domain.ValueObjects;
 
 namespace ExpenseReports.Domain.Employees;
 
+/// <summary>
+/// A person who belongs to exactly one tenant. Whether they may decide on
+/// expenses depends on <see cref="Role"/>; see <see cref="Expenses.Expense"/>.
+/// </summary>
 public sealed class Employee
 {
     public Guid Id { get; }
@@ -19,7 +23,8 @@ public sealed class Employee
 
     public bool IsManager => Role == Role.Manager;
 
-    private Employee() { } // EF Core
+    // For EF Core rehydration only; use the Create factory in application code.
+    private Employee() { }
 
     private Employee(Guid id, Guid tenantId, string name, Email email, Role role, string passwordHash)
     {

@@ -4,12 +4,20 @@ using ExpenseReports.Application.Expenses;
 
 namespace ExpenseReports.Api.Endpoints;
 
+/// <summary>
+/// Maps the expense routes. Endpoints are intentionally thin: they bind the
+/// request, delegate to a handler and return a result — all rules live deeper.
+/// Validation runs as an endpoint filter (400) and manager-only actions are
+/// gated by the ManagerPolicy authorization policy (403).
+/// </summary>
 internal static class ExpenseEndpoints
 {
     public const string ManagerPolicy = "ManagerOnly";
 
     public static void MapExpenseEndpoints(this IEndpointRouteBuilder app)
     {
+        // Everything under /expenses requires a valid JWT; specific routes add
+        // the manager policy on top.
         var group = app.MapGroup("/expenses")
             .RequireAuthorization()
             .WithTags("Expenses");

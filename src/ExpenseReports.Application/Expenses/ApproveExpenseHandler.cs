@@ -3,6 +3,12 @@ using ExpenseReports.Application.Common;
 
 namespace ExpenseReports.Application.Expenses;
 
+/// <summary>
+/// Orchestrates an approval. The handler stays thin: it loads the actors,
+/// supplies the data the aggregate cannot compute itself (the monthly total)
+/// and lets <see cref="Domain.Expenses.Expense.Approve"/> enforce the rules.
+/// Its real job is getting the concurrency control right.
+/// </summary>
 public sealed class ApproveExpenseHandler(
     ICurrentUser currentUser,
     IExpenseRepository expenses,
@@ -20,9 +26,13 @@ public sealed class ApproveExpenseHandler(
     public Task<ExpenseResponse> HandleAsync(Guid expenseId, CancellationToken ct) =>
         unitOfWork.ExecuteInTransactionAsync(async token =>
         {
+            // Tenant filter applies here: an expense from another tenant simply
+            // is not found, which the API turns into a 404.
             var expense = await expenses.GetByIdAsync(expenseId, token)
                 ?? throw new NotFoundException("Expense");
 
+            // Take the lock before reading the total, so two approvals for the
+            // same employee cannot both read a total that excludes the other.
             await expenses.LockEmployeeForApprovalAsync(expense.EmployeeId, token);
 
             var approver = await employees.GetByIdAsync(currentUser.EmployeeId, token)
@@ -30,6 +40,8 @@ public sealed class ApproveExpenseHandler(
             var tenant = await tenants.GetByIdAsync(currentUser.TenantId, token)
                 ?? throw new NotFoundException("Tenant");
 
+            // The aggregate needs the running total to enforce rule 4, but that
+            // requires querying sibling expenses — work that belongs to the repo.
             var approvedTotalThisMonth = await expenses.GetApprovedTotalAsync(
                 expense.EmployeeId,
                 expense.Amount.Currency,
