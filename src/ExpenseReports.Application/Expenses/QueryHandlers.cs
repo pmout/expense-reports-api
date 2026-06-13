@@ -12,9 +12,14 @@ public sealed class GetExpenseHandler(ICurrentUser currentUser, IExpenseReposito
 {
     public async Task<ExpenseResponse> HandleAsync(Guid expenseId, CancellationToken ct)
     {
+        // The repository's tenant filter already excludes other tenants, so a hit
+        // here is guaranteed to be in the caller's tenant.
         var expense = await expenses.GetByIdAsync(expenseId, ct)
             ?? throw new NotFoundException("Expense");
 
+        // Within the tenant, an employee may see only their own expense; a manager
+        // may see any. A non-owner non-manager gets 404, not 403, so they cannot
+        // even confirm the expense exists.
         var isOwner = expense.EmployeeId == currentUser.EmployeeId;
         if (!isOwner && currentUser.Role != Role.Manager)
             throw new NotFoundException("Expense");
@@ -27,6 +32,7 @@ public sealed class ListMyExpensesHandler(ICurrentUser currentUser, IExpenseRepo
 {
     public async Task<Page<ExpenseResponse>> HandleAsync(PageRequest page, CancellationToken ct)
     {
+        // Scoped to the caller's own id — "my expenses", regardless of role.
         var result = await expenses.ListByEmployeeAsync(currentUser.EmployeeId, page, ct);
         return result.Map(ExpenseResponse.From);
     }

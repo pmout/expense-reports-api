@@ -34,22 +34,35 @@ internal sealed class GlobalExceptionHandler(
         });
     }
 
+    // Translates each exception type to the HTTP status that best fits its meaning.
+    // Order matters: the more specific types are matched before the broader
+    // DomainException they inherit from. The discard arm guarantees an unknown
+    // exception never escapes as a stack trace — it becomes a generic 500.
     private static (int Status, string Title, string? Detail) Map(Exception exception) => exception switch
     {
-        // A decision raced with another one: the expense is no longer Pending.
+        // 409 (not 422): the request was valid, but a concurrent decision already
+        // moved the expense out of Pending — a conflict of state, not a bad rule.
         ExpenseAlreadyDecidedException already =>
             (StatusCodes.Status409Conflict, "Expense already decided", already.Message),
+        // 409: optimistic concurrency (xmin) detected a competing write at commit.
         DbUpdateConcurrencyException =>
             (StatusCodes.Status409Conflict, "Concurrent update",
                 "The expense was modified by another request. Fetch it again to see its current state."),
+        // 422: the input was well-formed but breaks a business rule (limit, self-
+        // approval, wrong tenant...). The domain's own message is safe to surface.
         DomainException domain =>
             (StatusCodes.Status422UnprocessableEntity, "Business rule violation", domain.Message),
+        // 404: also returned for cross-tenant access, so existence is never revealed.
         NotFoundException notFound =>
             (StatusCodes.Status404NotFound, "Resource not found", notFound.Message),
+        // 401 with a fixed message — never disclose whether it was the e-mail or password.
         InvalidCredentialsException =>
             (StatusCodes.Status401Unauthorized, "Authentication failed", "Invalid e-mail or password."),
+        // 400: malformed request the model binder rejected before a handler ran.
         BadHttpRequestException badRequest =>
             (StatusCodes.Status400BadRequest, "Invalid request", badRequest.Message),
+        // Anything unanticipated: 500 with no detail. The real exception is logged
+        // (above), not returned, so internals never reach the client.
         _ =>
             (StatusCodes.Status500InternalServerError, "An unexpected error occurred", null)
     };

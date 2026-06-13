@@ -14,6 +14,10 @@ public interface ICurrentUser
     Role Role { get; }
 }
 
+// Kept as a separate, single-member interface (Interface Segregation) so the
+// DbContext depends only on the nullable tenant it needs, not the full identity.
+// It also avoids a layering problem: the DbContext lives in Infrastructure and a
+// non-null guarantee belongs to authenticated requests, which it cannot assume.
 /// <summary>
 /// Nullable view of the current tenant, consumed by the persistence layer's
 /// global query filters. Null (no authenticated user) means queries match

@@ -21,14 +21,20 @@ public sealed class DatabaseSeeder(
 
     public async Task SeedAsync(CancellationToken ct = default)
     {
+        // Idempotency guard: makes it safe to run on every startup (docker-compose
+        // sets SeedOnStartup=true), so restarting the container never duplicates data.
         if (await db.Tenants.AnyAsync(ct))
         {
             logger.LogInformation("Database already seeded, skipping");
             return;
         }
 
+        // Hash once and reuse: every demo user shares the same password, and BCrypt
+        // is deliberately slow, so hashing per user would needlessly slow seeding.
         var passwordHash = passwordHasher.Hash(DemoPassword);
 
+        // Two tenants with deliberately different limits (1000 vs 5000) so the
+        // monthly-limit behavior is easy to demonstrate against either.
         AddTenant("Acme Corporation", 1000m, "acme.test", passwordHash);
         AddTenant("Globex Brasil", 5000m, "globex.test", passwordHash);
 

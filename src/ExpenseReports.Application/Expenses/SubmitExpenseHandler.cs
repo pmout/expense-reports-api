@@ -5,6 +5,8 @@ using ExpenseReports.Domain.ValueObjects;
 
 namespace ExpenseReports.Application.Expenses;
 
+// The request carries no TenantId or EmployeeId: those come from the JWT via the
+// loaded employee, so a caller cannot submit on behalf of someone else.
 public sealed record SubmitExpenseRequest(
     decimal Amount,
     Currency Currency,
@@ -21,9 +23,13 @@ public sealed class SubmitExpenseHandler(
 {
     public async Task<ExpenseResponse> HandleAsync(SubmitExpenseRequest request, CancellationToken ct)
     {
+        // Load the authenticated employee (tenant-filtered); Submit then stamps
+        // the new expense with that employee's id and tenant.
         var employee = await employees.GetByIdAsync(currentUser.EmployeeId, ct)
             ?? throw new NotFoundException("Employee");
 
+        // The domain factory owns all the validation (amount, description, date
+        // window). The handler just feeds it the inputs and the current time.
         var expense = Expense.Submit(
             employee,
             Money.Of(request.Amount, request.Currency),

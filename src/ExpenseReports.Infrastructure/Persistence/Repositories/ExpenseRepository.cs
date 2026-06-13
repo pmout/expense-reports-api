@@ -18,6 +18,9 @@ internal sealed class ExpenseRepository(ExpenseReportsDbContext db) : IExpenseRe
     public Task<Expense?> GetByIdAsync(Guid id, CancellationToken ct) =>
         db.Expenses.FirstOrDefaultAsync(e => e.Id == id, ct);
 
+    // Both list methods add only their specific predicate; the tenant filter is
+    // applied automatically on top, so "pending" already means "pending in this
+    // tenant" without the caller (or this code) ever spelling that out.
     public Task<Page<Expense>> ListByEmployeeAsync(Guid employeeId, PageRequest page, CancellationToken ct) =>
         ToPageAsync(db.Expenses.Where(e => e.EmployeeId == employeeId), page, ct);
 
@@ -47,10 +50,15 @@ internal sealed class ExpenseRepository(ExpenseReportsDbContext db) : IExpenseRe
         // Transaction-scoped advisory lock keyed on the employee: concurrent
         // approvals for the same employee queue up, so the monthly total each
         // one reads already includes the previous approval. Released
-        // automatically at commit/rollback.
+        // automatically at commit/rollback. The interpolated string is passed to
+        // ExecuteSqlAsync (FormattableString), so employeeId becomes a bound
+        // parameter — this is parameterized SQL, not string concatenation.
         db.Database.ExecuteSqlAsync(
             $"SELECT pg_advisory_xact_lock(hashtextextended({employeeId.ToString()}, 0))", ct);
 
+    // Shared paging helper: counts the full (tenant-filtered) set, then fetches
+    // one page. A stable sort — SubmittedAt then Id as a tie-breaker — keeps
+    // pages deterministic when two expenses share a timestamp.
     private static async Task<Page<Expense>> ToPageAsync(
         IQueryable<Expense> query, PageRequest page, CancellationToken ct)
     {

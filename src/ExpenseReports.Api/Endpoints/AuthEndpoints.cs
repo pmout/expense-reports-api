@@ -7,6 +7,11 @@ internal static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
+        // The fluent chain reads as the endpoint's contract:
+        //   AllowAnonymous   — login must be reachable before a token exists;
+        //   RequireRateLimiting("login") — applies the brute-force limiter;
+        //   AddEndpointFilter — validates the body (400) before the handler;
+        //   Produces/...      — documents the responses for Swagger.
         app.MapPost("/auth/login",
                 async (LoginRequest request, LoginHandler handler, CancellationToken ct) =>
                     Results.Ok(await handler.HandleAsync(request, ct)))
