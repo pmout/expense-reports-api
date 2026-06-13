@@ -1,4 +1,5 @@
 using ExpenseReports.Application.Common;
+using ExpenseReports.Domain.Auditing;
 using ExpenseReports.Domain.Employees;
 using ExpenseReports.Domain.Expenses;
 using ExpenseReports.Domain.Tenants;
@@ -49,6 +50,16 @@ public interface IEmployeeRepository
 public interface ITenantRepository
 {
     Task<Tenant?> GetByIdAsync(Guid id, CancellationToken ct);
+}
+
+/// <summary>
+/// Append-only store of decision audit entries. Its own port (not folded into
+/// IExpenseRepository) so the auditing concern stays separable from the expense
+/// lifecycle — the bonus can be added or removed without touching the core repo.
+/// </summary>
+public interface IExpenseAuditRepository
+{
+    Task AddAsync(ExpenseAuditEntry entry, CancellationToken ct);
 }
 
 public interface IUnitOfWork

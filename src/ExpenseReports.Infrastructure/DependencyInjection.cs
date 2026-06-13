@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IExpenseRepository, ExpenseRepository>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<IExpenseAuditRepository, ExpenseAuditRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<DatabaseSeeder>();
 

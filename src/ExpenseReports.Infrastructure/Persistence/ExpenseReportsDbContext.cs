@@ -1,4 +1,5 @@
 using ExpenseReports.Application.Abstractions;
+using ExpenseReports.Domain.Auditing;
 using ExpenseReports.Domain.Employees;
 using ExpenseReports.Domain.Expenses;
 using ExpenseReports.Domain.Tenants;
@@ -27,6 +28,7 @@ public sealed class ExpenseReportsDbContext : DbContext
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<ExpenseAuditEntry> AuditEntries => Set<ExpenseAuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,5 +40,6 @@ public sealed class ExpenseReportsDbContext : DbContext
         // navigation loading. The filter lives in the SQL, not in the handlers.
         modelBuilder.Entity<Employee>().HasQueryFilter(e => e.TenantId == _currentTenantId);
         modelBuilder.Entity<Expense>().HasQueryFilter(e => e.TenantId == _currentTenantId);
+        modelBuilder.Entity<ExpenseAuditEntry>().HasQueryFilter(a => a.TenantId == _currentTenantId);
     }
 }

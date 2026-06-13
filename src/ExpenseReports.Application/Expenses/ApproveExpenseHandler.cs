@@ -1,5 +1,6 @@
 using ExpenseReports.Application.Abstractions;
 using ExpenseReports.Application.Common;
+using ExpenseReports.Domain.Auditing;
 
 namespace ExpenseReports.Application.Expenses;
 
@@ -14,6 +15,7 @@ public sealed class ApproveExpenseHandler(
     IExpenseRepository expenses,
     IEmployeeRepository employees,
     ITenantRepository tenants,
+    IExpenseAuditRepository auditLog,
     IUnitOfWork unitOfWork,
     TimeProvider clock)
 {
@@ -50,6 +52,10 @@ public sealed class ApproveExpenseHandler(
                 token);
 
             expense.Approve(approver, approvedTotalThisMonth, tenant.MonthlyExpenseLimit, clock.GetUtcNow());
+
+            // Audit entry written inside the same transaction as the decision, so
+            // the record and the state change commit together or not at all.
+            await auditLog.AddAsync(ExpenseAuditEntry.Record(expense), token);
 
             await unitOfWork.SaveChangesAsync(token);
             return ExpenseResponse.From(expense);

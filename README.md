@@ -124,15 +124,24 @@ Duas corridas possíveis:
 
 ## Testes
 
-- **38 unitários** sobre o domínio: pelo menos um por regra de negócio, com sad paths e fronteiras (limite exato, moeda divergente, janelas de datas, comprimentos de razão de rejeição).
-- **17 de integração** com Postgres real (Testcontainers): isolamento de tenant em leitura, decisão e listagem de pendentes; ciclo completo aprovar/rejeitar; limite mensal via HTTP; autenticação e sad paths. Não há mocks de repositórios — testa-se o SQL que corre em produção.
+- **41 unitários** sobre o domínio: pelo menos um por regra de negócio, com sad paths e fronteiras (limite exato, moeda divergente, janelas de datas, comprimentos de razão de rejeição), mais a auditoria de decisões.
+- **21 de integração** com Postgres real (Testcontainers): isolamento de tenant em leitura, decisão e listagem de pendentes; ciclo completo aprovar/rejeitar; limite mensal via HTTP; autenticação e sad paths; escrita do audit log. Não há mocks de repositórios — testa-se o SQL que corre em produção.
+
+## Funcionalidades bónus
+
+O enunciado pede 1 ou 2 bónus, e só com o must-have sólido. Implementei:
+
+- **Rate limiting no login** — `FixedWindowRateLimiter`, 5 tentativas/min por IP no `/auth/login`, como proteção contra brute-force.
+- **Swagger/OpenAPI** — UI interativa com esquema de autenticação Bearer e descrição por endpoint.
+- **Audit log de aprovações/rejeições** — tabela separada (`expense_audit_entries`) que regista, de forma imutável, cada decisão: que despesa, qual o resultado, quem decidiu, quando e (em rejeições) o motivo. A entrada é escrita **na mesma transação** que a mudança de estado, por isso o registo e a decisão são atómicos. Escolhi este bónus porque toda a decisão já passa por um ponto único no domínio (`Expense.Approve`/`Reject`), o que torna a captura barata e fiável, e porque a rastreabilidade é o que mais valor acrescenta num sistema de reembolsos. A tabela é *append-only* e respeita o mesmo isolamento de tenant das restantes (global query filter).
 
 ## O que ficou de fora (e porquê)
 
 - **Refresh tokens / logout** — JWT de 60 min é suficiente para o âmbito; gestão de sessões é um projeto em si.
 - **Conversão cambial** — ver decisão acima.
 - **Gestão de tenants/utilizadores via API** — o enunciado centra-se no fluxo de despesas; o seed cobre os dados necessários.
-- **Restantes bónus** (audit log, upload de recibos, idempotency key, RLS, background job) — preferi o must-have sólido; dos bónus, implementei rate limiting no login e Swagger, por serem os de melhor rácio valor/risco.
+- **Endpoint de leitura do audit log** — a auditoria é gravada e testada; expor uma rota para a consultar seria a extensão natural, deixada de fora para manter o âmbito focado.
+- **Restantes bónus** (upload de recibos, idempotency key, RLS, background job) — preferi entregar menos bónus bem-feitos do que muitos por fazer.
 - **CI/CD** — não avaliado; o repositório compila e testa com dois comandos.
 
 ---
@@ -141,7 +150,7 @@ Duas corridas possíveis:
 
 **O que priorizei e porquê.** O domínio com as invariantes e testes primeiro (é onde está o valor de negócio), e o isolamento de tenant como propriedade do sistema — resolvido uma vez na camada de dados, não repetido em cada handler. Decisões de concorrência pensadas antes da API, porque corrigi-las depois é caro.
 
-**O que faria de diferente com mais tempo.** Audit log das decisões (tabela separada, já que toda a informação passa num único ponto); idempotência no `POST /expenses`; testes de carga à corrida do limite mensal para validar o lock sob contenção real; Row-Level Security no Postgres como segunda linha de defesa do isolamento.
+**O que faria de diferente com mais tempo.** Um endpoint de leitura para o audit log (já gravado) com filtros; idempotência no `POST /expenses`; testes de carga à corrida do limite mensal para validar o lock sob contenção real; Row-Level Security no Postgres como segunda linha de defesa do isolamento.
 
 **A parte de que mais me orgulho.** O tratamento da corrida na aprovação com limite mensal — advisory lock por colaborador + token `xmin` — porque é o tipo de bug que não aparece em demos e custa dinheiro em produção. E o facto de o isolamento de tenant ser *fail closed*: sem tenant no contexto, as queries devolvem vazio.
 
