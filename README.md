@@ -116,6 +116,10 @@ Duas corridas possíveis:
 - Logs estruturados (Serilog, JSON) sem corpos de request — passwords e tokens não podem aparecer.
 - SQL sempre parametrizado (EF Core; o único SQL manual — o advisory lock — usa `FormattableString` parameterizado).
 
+**Nota sobre logging (`docker compose up` limpo).** Dois ajustes de nível de log em `appsettings.json` mantêm o arranque sem ruído, sem esconder falhas reais:
+- `Microsoft.EntityFrameworkCore.Database.Command: Fatal` — no primeiro arranque, `MigrateAsync` sonda a tabela `__EFMigrationsHistory` antes de ela existir; o EF apanha esse erro e cria o schema, mas o seu logger regista-o como `Error`. Uma falha **real** de migração faz `MigrateAsync` lançar e aborta o arranque (visível); uma falha de query em runtime propaga até ao `GlobalExceptionHandler`, que a regista **com contexto** (método + rota). O log ao nível do comando é, portanto, redundante.
+- `Microsoft.AspNetCore.DataProtection: Error` — a API é stateless (JWT, sem cookies/antiforgery), logo nunca exercita o Data Protection; os seus avisos de chaves efémeras em container são ruído.
+
 ---
 
 ## Testes

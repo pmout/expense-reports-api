@@ -16,6 +16,9 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 COPY --from=build /app .
 
+# Clear the base image's ASPNETCORE_HTTP_PORTS so it does not conflict with
+# ASPNETCORE_URLS (having both set logs an "Overriding HTTP_PORTS" warning at boot).
+ENV ASPNETCORE_HTTP_PORTS=
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
